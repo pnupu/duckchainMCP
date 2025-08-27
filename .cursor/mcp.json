@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "duck-mcp": {
+      "command": "node",
+      "args": [
+        "packages/mcp-server/dist/index.js",
+        "--stdio"
+      ],
+      "env": {
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}",
+        "OPENAI_EMBEDDING_MODEL": "${env:OPENAI_EMBEDDING_MODEL}"
+      }
+    }
+  }
+}
+
+

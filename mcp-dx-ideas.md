@@ -88,6 +88,7 @@ Network Strategy
 - Testnet-only for all write actions (deploy, faucet, tx generation).
 - Mainnet read-only supported via explicit `chain` parameter in tools (e.g., `chain.txLookup(txHash, "mainnet")`).
 - Keep editor convenience to add networks (Chainlist payload), but no mainnet faucet.
+- Note: DuckChain testnet explorer is flaky; prefer mainnet explorer/API for demos.
 
 Chain enum and examples
 

@@ -18,7 +18,10 @@
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "mcp:dev": "npm run -w @duck/mcp-server dev",
+    "mcp:start": "npm run -w @duck/mcp-server start",
+    "mcp:build": "npm run -w @duck/mcp-server build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",
@@ -55,5 +58,8 @@
   "ct3aMetadata": {
     "initVersion": "7.39.3"
   },
-  "packageManager": "npm@11.3.0"
+  "packageManager": "npm@11.3.0",
+  "workspaces": [
+    "packages/*"
+  ]
 }
