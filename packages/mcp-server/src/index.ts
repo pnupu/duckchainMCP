@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+#!/usr/bin/env node 
 
 // Placeholder MCP server entrypoint. We'll wire tools next.
 export function start() {
@@ -12,7 +11,7 @@ import { startStdIoServer } from "./mcp";
 
 async function main() {
   const argvRaw = process.argv.slice(2);
-  const args: string[] = Array.isArray(argvRaw) ? (argvRaw as string[]) : [];
+  const args: string[] = Array.isArray(argvRaw) ? (argvRaw) : [];
   if (args.includes("--help")) {
     console.log(`Usage: duck-mcp [--ingest ./docs] [--http [port]] [--stdio]\n  Env: OPENAI_API_KEY, OPENAI_EMBEDDING_MODEL`);
     process.exit(0);
@@ -30,7 +29,7 @@ async function main() {
     startHttpServer(Number.isFinite(maybePort) ? maybePort : undefined);
   }
   if (args.includes("--stdio")) {
-    startStdIoServer();
+    void startStdIoServer();
   }
 }
 

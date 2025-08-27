@@ -299,4 +299,31 @@ Technology Decisions
   - API Gateway + Lambda + OpenSearch for aggregates; anonymized payloads.
   - Client-side redaction and sampling; toggle via env.
 
+Explorer API integrations (mainnet)
+
+- Purpose
+  - Complement JSON-RPC with richer, indexed data for fast UX and summaries.
+  - Prefer mainnet explorer API; testnet explorer noted flaky.
+
+- Proposed MCP tools (mapping to `https://scan.duckchain.io`)
+  - `explorer.latestTransactions(limit?)` → GET `/main-page/transactions` or `/transactions`
+  - `explorer.txSummary(txHash)` → GET `/transactions/{txHash}/summary`
+  - `explorer.txLogs(txHash)` → GET `/transactions/{txHash}/logs`
+  - `explorer.txStateChanges(txHash)` → GET `/transactions/{txHash}/state-changes`
+  - `explorer.txRawTrace(txHash)` → GET `/transactions/{txHash}/raw-trace`
+  - `explorer.addressInfo(address)` → GET `/addresses/{address}` and `/addresses/{address}/counters`
+  - `explorer.addressTransactions(address, pagination?)` → GET `/addresses/{address}/transactions`
+  - `explorer.addressTokens(address)` → GET `/addresses/{address}/tokens` (balances with filters)
+  - `explorer.tokenInfo(tokenAddress)` → GET `/tokens/{address}` (+ holders/transfers)
+  - `explorer.blocksLatest(limit?)` → GET `/main-page/blocks` or `/blocks`
+  - `explorer.search(query)` → GET `/search` then `/search/check-redirect`
+  - `explorer.configRpcUrl()` → GET `/config/json-rpc-url` for dynamic RPC fallback
+  - `explorer.health()` → GET `/health`
+
+- Integration notes
+  - Always include `explorerUrl` deep links in results for judge-friendly demos.
+  - If explorer endpoint fails (404/5xx), fallback to JSON-RPC where feasible (already used by `chain.txLookup`).
+  - Add simple in-memory cache (e.g., 5–30s) and exponential backoff for rate limits.
+  - Normalize pagination (page/limit) and provide `nextCursor` where API supports it.
+
 
