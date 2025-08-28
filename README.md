@@ -1,29 +1,54 @@
-# Create T3 App
+# Duck Dev Copilot
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+MCP-powered tools for DuckChain development. This repo contains:
 
-## What's next? How do I make an app with this?
+- Next.js app with a chat UI that streams responses
+- Standalone MCP server (`@duck/mcp-server`) providing docs search, tx lookup, error explanations
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+## Prerequisites
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+- Node 20+
+- PostgreSQL (for the scaffolded T3 DB; not required to try the chat)
+- OpenAI API key (optional, for streaming summarization)
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+## Quick start
 
-## Learn More
+1. Install deps
+   ```bash
+   npm install
+   ```
+2. Environment
+   - Create `.env` with at least:
+     ```bash
+     DATABASE_URL=postgres://user:pass@localhost:5432/db
+     OPENAI_API_KEY=sk-... # optional
+     ```
+3. Start MCP server (stdio)
+   ```bash
+   npm run mcp:dev
+   ```
+4. Start web app
+   ```bash
+   npm run dev
+   ```
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+Open http://localhost:3000 and use the examples or type queries. Responses stream as they are generated.
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+## Available MCP tools
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+- `docs.search` — local RAG over ingested markdown
+- `chain.txLookup` — DuckChain mainnet transaction details (RPC fallback)
+- `errors.explain` — classify error, suggest fixes, cite docs
+- `explorer.latestTransactions` — mainnet latest tx feed
 
-## How do I deploy this?
+## Scripts
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+- `dev` — start Next.js
+- `build` / `start` — build and run Next.js
+- `mcp:dev` / `mcp:build` / `mcp:start` — develop/build/run MCP server
+- `lint`, `typecheck`, `format:check` — quality
+
+## Notes
+
+- Dark theme is enabled globally; logo served from `/public/logo-nobg.png`.
+- If `OPENAI_API_KEY` is not set, the chat streams raw tool output.

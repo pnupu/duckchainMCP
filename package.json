@@ -1,8 +1,9 @@
 {
-  "name": "gitbook",
+  "name": "duck-dev-copilot",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "description": "MCP-powered DuckChain developer copilot (Next.js app + standalone MCP server)",
   "scripts": {
     "build": "next build",
     "check": "next lint && tsc --noEmit",
