@@ -1,11 +1,13 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import express from "express";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { getEmbedding } from "./rag/embeddings";
 import { readDocs, topK } from "./rag/store";
 
-export async function startStdIoServer() {
+function buildServer(): Server {
   const server = new Server({ name: "duck-mcp", version: "0.1.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -191,8 +193,53 @@ export async function startStdIoServer() {
     throw new Error(`Unknown tool: ${name}`);
   });
 
+  return server;
+}
+
+export async function startStdIoServer() {
+  const server = buildServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
+}
+
+export async function startHttpServer(port = 3020) {
+  const app = express();
+  app.use(express.json());
+
+  const transports: Record<string, SSEServerTransport> = {};
+
+  app.get("/mcp", async (_req, res) => {
+    try {
+      const transport = new SSEServerTransport("/messages", res);
+      transports[transport.sessionId] = transport;
+      transport.onclose = () => { delete transports[transport.sessionId]; };
+      const server = buildServer();
+      await server.connect(transport);
+    } catch (err) {
+      if (!res.headersSent) res.status(500).send("Error establishing SSE stream");
+      console.error("[mcp-server] SSE /mcp error:", err);
+    }
+  });
+
+  app.post("/messages", async (req, res) => {
+    const sessionId = String(req.query.sessionId ?? "");
+    const transport = transports[sessionId];
+    if (!sessionId || !transport) {
+      res.status(404).send("Session not found");
+      return;
+    }
+    try {
+      await transport.handlePostMessage(req as unknown as Request, res as unknown as Response, req.body);
+    } catch (err) {
+      if (!res.headersSent) res.status(500).send("Error handling request");
+      console.error("[mcp-server] /messages error:", err);
+    }
+  });
+
+  await new Promise<void>((resolve) => {
+    app.listen(port, () => resolve());
+  });
+  console.error(`[mcp-server] HTTP listening on :${port}`);
 }
 
 let _rpcId = 1;

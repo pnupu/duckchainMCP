@@ -10,6 +10,9 @@
         "OPENAI_API_KEY": "${env:OPENAI_API_KEY}",
         "OPENAI_EMBEDDING_MODEL": "${env:OPENAI_EMBEDDING_MODEL}"
       }
+    },
+    "duck-mcp-http": {
+      "url": "http://localhost:3020/mcp"
     }
   }
 }

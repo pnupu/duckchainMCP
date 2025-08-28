@@ -1,9 +1,7 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { type CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+// Note: Using stdio JSON-RPC directly; server SDK imports not used here
 import { spawn } from "node:child_process";
-import { once } from "node:events";
 
-type ToolCall = { name: string; arguments: unknown };
+//
 
 export class McpClient {
   private child?: ReturnType<typeof spawn>;
@@ -23,31 +21,33 @@ export class McpClient {
   }
 
   async listTools(): Promise<string[]> {
-    const res = await this.rpc({ jsonrpc: "2.0", id: 1, method: "tools/list" });
-    return (res?.result?.tools ?? []).map((t: any) => t.name as string);
+    const res = await this.rpc<{ result?: { tools?: Array<{ name?: string }> } }>({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+    const tools = res?.result?.tools ?? [];
+    return tools.map((t) => String(t.name ?? ""));
   }
 
   async callTool<T = unknown>(name: string, args: unknown): Promise<T> {
-    const res = await this.rpc({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } });
+    const res = await this.rpc<{ result?: { content?: Array<{ text?: string; content?: string }> } }>({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name, arguments: args } });
     const content = res?.result?.content?.[0]?.text ?? res?.result?.content?.[0]?.content ?? "";
     return content as T;
   }
 
-  private async rpc(payload: any): Promise<any> {
+  private async rpc<T = unknown>(payload: { jsonrpc: "2.0"; id: number; method: string; params?: unknown }): Promise<T> {
     if (!this.child) throw new Error("MCP client not started");
     const proc = this.child;
     const data = JSON.stringify(payload) + "\n";
     proc.stdin?.write(data);
     const line = await readLine(proc);
-    return JSON.parse(line);
+    return JSON.parse(line) as T;
   }
 }
 
 async function readLine(proc: ReturnType<typeof spawn>): Promise<string> {
   return await new Promise<string>((resolve, reject) => {
     let buf = "";
-    proc.stdout?.on("data", (chunk) => {
-      buf += chunk.toString();
+    proc.stdout?.on("data", (chunk: Buffer | string) => {
+      const str = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+      buf += str;
       const idx = buf.indexOf("\n");
       if (idx !== -1) {
         const line = buf.slice(0, idx);

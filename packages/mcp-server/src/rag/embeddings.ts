@@ -1,10 +1,7 @@
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small";
 
-if (!OPENAI_API_KEY) {
-  // Don't throw immediately so that non-embedding commands (like --help) still work
-  console.warn("[mcp-server] OPENAI_API_KEY is not set. Embedding features will fail until provided.");
-}
+// Note: Do not warn at module load; consumers will get a clear error via assertKey() when needed.
 
 export async function getEmbedding(input: string): Promise<number[]> {
   assertKey();

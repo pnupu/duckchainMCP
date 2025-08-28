@@ -1,13 +1,14 @@
 #!/usr/bin/env node 
 
+import "dotenv/config";
+
 // Placeholder MCP server entrypoint. We'll wire tools next.
 export function start() {
   console.log("@duck/mcp-server starting (stub)");
 }
 
 import { ingestMarkdownDir } from "./ingest";
-import { startHttpServer } from "./http";
-import { startStdIoServer } from "./mcp";
+import { startStdIoServer, startHttpServer } from "./mcp";
 
 async function main() {
   const argvRaw = process.argv.slice(2);
@@ -26,7 +27,8 @@ async function main() {
   if (args.includes("--http")) {
     const portIdx = args.indexOf("--http") + 1;
     const maybePort = Number(args[portIdx] ?? NaN);
-    startHttpServer(Number.isFinite(maybePort) ? maybePort : undefined);
+    const port = Number.isFinite(maybePort) ? maybePort : 3020;
+    await startHttpServer(port);
   }
   if (args.includes("--stdio")) {
     void startStdIoServer();
