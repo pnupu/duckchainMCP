@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "duck-web",
       script: "node",
-      args: "node_modules/next/dist/bin/next start -p 3333",
+      args: "node_modules/next/dist/bin/next start -p 3443",
       cwd: __dirname,
       env: {
         NODE_ENV: "production",
