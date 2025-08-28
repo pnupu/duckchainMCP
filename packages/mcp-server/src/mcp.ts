@@ -2,10 +2,41 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { getEmbedding } from "./rag/embeddings";
 import { readDocs, topK } from "./rag/store";
+let _transportMode: "stdio" | "http" = "stdio";
+function logInfo(message: string, extra?: unknown) {
+  const prefix = `[mcp-server] ${message}`;
+  if (extra !== undefined) {
+    try {
+      const json = typeof extra === "string" ? extra : JSON.stringify(extra);
+      if (_transportMode === "http") console.log(prefix + " " + json);
+      else console.error(prefix + " " + json);
+    } catch {
+      if (_transportMode === "http") console.log(prefix);
+      else console.error(prefix);
+    }
+  } else {
+    if (_transportMode === "http") console.log(prefix);
+    else console.error(prefix);
+  }
+}
+function logError(message: string, error?: unknown) {
+  const prefix = `[mcp-server] ${message}`;
+  if (error !== undefined) {
+    try {
+      const json = typeof error === "string" ? error : JSON.stringify(error);
+      console.error(prefix + " " + json);
+    } catch {
+      console.error(prefix);
+    }
+  } else {
+    console.error(prefix);
+  }
+}
 
 function buildServer(): Server {
   const server = new Server({ name: "duck-mcp", version: "0.1.0" }, { capabilities: { tools: {} } });
@@ -66,6 +97,10 @@ function buildServer(): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args } = req.params;
+    const startedAt = Date.now();
+    let argsForLog: string | undefined;
+    try { argsForLog = JSON.stringify(args); } catch { argsForLog = undefined; }
+    logInfo(`tool ${name} start`, argsForLog);
 
     // docs.search
     if (name === "docs.search") {
@@ -78,7 +113,9 @@ function buildServer(): Server {
       const emb = await getEmbedding(query);
       const docs = await readDocs();
       const results = topK(emb, docs, (k ?? 5)).map(({ doc, score }) => ({ id: doc.id, title: doc.title, url: doc.url, snippet: doc.content.slice(0, 400), score }));
-      return { content: [{ type: "text", text: JSON.stringify({ results }) }] };
+      const result = { content: [{ type: "text", text: JSON.stringify({ results }) }] } as const;
+      logInfo(`tool ${name} ok ${Date.now() - startedAt}ms`);
+      return result;
     }
 
     // chain.txLookup
@@ -104,6 +141,7 @@ function buildServer(): Server {
             } catch {}
             const logsItems = isLogItems(logs) ? logs.items : logs;
             const result = { chain, txHash, explorerUrl, tx: txInfo ?? null, logs: logsItems };
+            logInfo(`tool ${name} ok ${Date.now() - startedAt}ms`);
             return { content: [{ type: "text", text: JSON.stringify(result) }] } as const;
           } catch {}
         }
@@ -121,6 +159,7 @@ function buildServer(): Server {
           return { content: [{ type: "text", text: JSON.stringify({ error: "Transaction not found", chain, txHash, explorerUrl }) }] };
         }
         const result = { chain, txHash, explorerUrl, tx, receipt: receipt ?? null };
+        logInfo(`tool ${name} ok ${Date.now() - startedAt}ms`);
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
       const rpcUrl = process.env.DUCKCHAIN_TESTNET_RPC ?? "https://testnet-rpc.duckchain.io";
@@ -133,8 +172,10 @@ function buildServer(): Server {
           return { content: [{ type: "text", text: JSON.stringify({ error: "Transaction not found", chain, txHash, explorerUrl }) }] };
         }
         const result = { chain, txHash, explorerUrl, tx, receipt: receipt ?? null };
+        logInfo(`tool ${name} ok ${Date.now() - startedAt}ms`);
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       } catch (e) {
+        logError(`tool ${name} fail ${Date.now() - startedAt}ms`, e);
         return { content: [{ type: "text", text: JSON.stringify({ error: "Testnet RPC unavailable", details: String(e), chain, txHash, explorerUrl }) }] };
       }
     }
@@ -158,6 +199,7 @@ function buildServer(): Server {
       const docs = await readDocs();
       const citations = topK(emb, docs, 3).map(({ doc, score }) => ({ id: doc.id, title: doc.title, score, snippet: doc.content.slice(0, 300) }));
       const result = { message, analysis, txSummary, citations };
+      logInfo(`tool ${name} ok ${Date.now() - startedAt}ms`);
       return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }
 
@@ -187,7 +229,9 @@ function buildServer(): Server {
         const to = typeof toObj?.hash === "string" ? toObj.hash : (typeof t.to === "string" ? t.to : undefined);
         return { hash, status, block, timestamp, from, to, explorerUrl: `https://scan.duckchain.io/tx/${hash}` };
       });
-      return { content: [{ type: "text", text: JSON.stringify({ results }) }] };
+      const result = { results };
+      logInfo(`tool ${name} ok ${Date.now() - startedAt}ms`);
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }
 
     throw new Error(`Unknown tool: ${name}`);
@@ -199,6 +243,7 @@ function buildServer(): Server {
 export async function startStdIoServer() {
   const server = buildServer();
   const transport = new StdioServerTransport();
+  _transportMode = "stdio";
   await server.connect(transport);
 }
 
@@ -217,29 +262,35 @@ export async function startHttpServer(port = 3020) {
       await server.connect(transport);
     } catch (err) {
       if (!res.headersSent) res.status(500).send("Error establishing SSE stream");
-      console.error("[mcp-server] SSE /mcp error:", err);
+      logError("SSE /mcp error", err);
     }
   });
 
   app.post("/messages", async (req, res) => {
-    const sessionId = String(req.query.sessionId ?? "");
+    const rawSession = req.query.sessionId;
+    const sessionId = typeof rawSession === "string" ? rawSession : Array.isArray(rawSession) ? rawSession[0] : "";
     const transport = transports[sessionId];
     if (!sessionId || !transport) {
       res.status(404).send("Session not found");
       return;
     }
     try {
-      await transport.handlePostMessage(req as unknown as Request, res as unknown as Response, req.body);
+      await transport.handlePostMessage(
+        req as unknown as IncomingMessage,
+        res as unknown as ServerResponse,
+        req.body,
+      );
     } catch (err) {
       if (!res.headersSent) res.status(500).send("Error handling request");
-      console.error("[mcp-server] /messages error:", err);
+      logError("/messages error", err);
     }
   });
 
   await new Promise<void>((resolve) => {
     app.listen(port, () => resolve());
   });
-  console.error(`[mcp-server] HTTP listening on :${port}`);
+  _transportMode = "http";
+  logInfo(`HTTP listening on :${port}`);
 }
 
 let _rpcId = 1;
