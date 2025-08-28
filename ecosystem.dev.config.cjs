@@ -7,7 +7,7 @@ module.exports = {
       cwd: __dirname,
       env: {
         NODE_ENV: "development",
-        PORT: "3333",
+        PORT: "3443",
       },
       watch: false,
       max_restarts: 10,

@@ -27,12 +27,12 @@ MCP-powered tools for DuckChain development. This repo contains:
    ```bash
    npm run mcp:dev
    ```
-4. Start web app (port 3333)
+4. Start web app (port 3443)
    ```bash
    npm run dev
    ```
 
-Open http://localhost:3333 and use the examples or type queries. Responses stream as they are generated.
+Open http://localhost:3443 and use the examples or type queries. Responses stream as they are generated.
 
 ## Available MCP tools
 
