@@ -37,7 +37,7 @@ export default function Home() {
         <button className="rounded bg-zinc-800 px-3 py-1 text-zinc-100 hover:bg-zinc-700" onClick={() => setInput("What is DuckChain gas price on mainnet?")}>Example: ask</button>
       </div>
 
-      <div ref={scrollRef} className="min-h-[320px] max-h-[70vh] overflow-y-auto rounded border border-zinc-800 bg-zinc-900 p-3 space-y-2 text-zinc-100">
+      <div ref={scrollRef} className="min-h-[320px] max-h-[65vh] overflow-y-auto rounded border border-zinc-800 bg-zinc-900 p-3 space-y-2 text-zinc-100">
         {messages.map((m, i) => (
           <div
             key={i}
