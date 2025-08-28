@@ -24,6 +24,14 @@ function logInfo(message: string, extra?: unknown) {
     else console.error(prefix);
   }
 }
+function getFirstQueryString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const first = value[0] as string | undefined;
+    return typeof first === "string" ? first : "";
+  }
+  return "";
+}
 function logError(message: string, error?: unknown) {
   const prefix = `[mcp-server] ${message}`;
   if (error !== undefined) {
@@ -234,6 +242,7 @@ function buildServer(): Server {
       return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }
 
+    logError(`tool ${name} unknown`);
     throw new Error(`Unknown tool: ${name}`);
   });
 
@@ -267,8 +276,8 @@ export async function startHttpServer(port = 3020) {
   });
 
   app.post("/messages", async (req, res) => {
-    const rawSession = req.query.sessionId;
-    const sessionId = typeof rawSession === "string" ? rawSession : Array.isArray(rawSession) ? rawSession[0] : "";
+    const rawSession = (req.query as Record<string, unknown>).sessionId;
+    const sessionId: string = getFirstQueryString(rawSession);
     const transport = transports[sessionId];
     if (!sessionId || !transport) {
       res.status(404).send("Session not found");
